@@ -11,6 +11,8 @@ namespace SFIT.RTS.Player {
         [SerializeField] private new Camera camera;
 
         [SerializeField] private CameraConfig cameraConfig;
+        [SerializeField] private LayerMask selectableLayers;
+        [SerializeField] private LayerMask floorLayers;
         private CinemachineFollow cinemachineFollow;
         private float zoomStartTime;
         private float rotationStartTime;
@@ -35,6 +37,19 @@ namespace SFIT.RTS.Player {
             HandleZooming();
             HandleRotation();
             HandleLeftClick();
+            HandleRightClick();
+        }
+
+        private void HandleRightClick() {
+            if (camera == null || selectedUnit == null || selectedUnit is not IMoveable) { return; }
+
+            Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (Mouse.current.rightButton.wasReleasedThisFrame
+                && Physics.Raycast(cameraRay, out RaycastHit hitInfo, float.MaxValue, floorLayers)) {
+                if (selectedUnit is IMoveable worker) {
+                    worker.MoveTo(hitInfo.point);
+                }
+            }
         }
 
         private void HandleLeftClick() {
@@ -48,7 +63,7 @@ namespace SFIT.RTS.Player {
                     selectedUnit = null;
                 }
 
-                if (Physics.Raycast(cameraRay, out RaycastHit hitInfo, float.MaxValue, LayerMask.GetMask("Default"))
+                if (Physics.Raycast(cameraRay, out RaycastHit hitInfo, float.MaxValue, selectableLayers)
                     && hitInfo.collider.TryGetComponent(out ISelectable selectable)) {
                     selectable.Select();
                     selectedUnit = selectable;

@@ -51,7 +51,7 @@ MonoBehaviour:
   m_EndAngleFade: 180
   m_UVScale: {x: 1, y: 1}
   m_UVBias: {x: 0, y: 0}
-  m_DecalLayerMask: 1
+  m_DecalLayerMask: 2
   m_ScaleMode: 0
   m_Offset: {x: 0, y: 0, z: 4}
   m_Size: {x: 1, y: 1, z: 8}
@@ -69,7 +69,7 @@ GameObject:
   - component: {fileID: 4199894337313176223}
   - component: {fileID: 3608148841221361602}
   - component: {fileID: 2968024297008306998}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Worker
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -127,7 +127,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c347ebd24228c4c50a288ac583da9284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  target: {fileID: 0}
   selectionIndicator: {fileID: 3453956761036452425}
 --- !u!136 &3608148841221361602
 CapsuleCollider:

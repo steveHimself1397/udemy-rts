@@ -5,8 +5,7 @@ using UnityEngine.Rendering.Universal;
 namespace SFIT.RTS.Units {
 
     [RequireComponent(typeof(NavMeshAgent))]
-    public class Worker : MonoBehaviour, ISelectable {
-        [SerializeField] private Transform target;
+    public class Worker : MonoBehaviour, ISelectable, IMoveable {
         [SerializeField] private DecalProjector selectionIndicator;
         private NavMeshAgent agent;
 
@@ -15,18 +14,16 @@ namespace SFIT.RTS.Units {
             agent = GetComponent<NavMeshAgent>();
         }
 
-        // Update is called once per frame
-        void Update() {
-            if (target != null) {
-                agent.SetDestination(target.position);
-            }
-        }
         public void Deselect() {
             selectionIndicator.gameObject.SetActive(false);
         }
 
         public void Select() {
             selectionIndicator.gameObject.SetActive(true);
+        }
+
+        public void MoveTo(Vector3 position) {
+            agent.SetDestination(position);
         }
     }
 }
