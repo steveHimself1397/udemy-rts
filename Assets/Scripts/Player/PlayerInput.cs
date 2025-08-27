@@ -1,4 +1,5 @@
 using System;
+using SFIT.RTS.Units;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -7,6 +8,7 @@ namespace SFIT.RTS.Player {
     public class PlayerInput : MonoBehaviour {
         [SerializeField] private Rigidbody cameraTarget;
         [SerializeField] private CinemachineCamera cinemachineCamera;
+        [SerializeField] private new Camera camera;
 
         [SerializeField] private CameraConfig cameraConfig;
         private CinemachineFollow cinemachineFollow;
@@ -15,6 +17,8 @@ namespace SFIT.RTS.Player {
         private Vector3 startingFollowOffset;
 
         private float maxRotationAmount;
+
+        private ISelectable selectedUnit;
 
 
         private void Awake() {
@@ -30,6 +34,27 @@ namespace SFIT.RTS.Player {
             HandlePanning();
             HandleZooming();
             HandleRotation();
+            HandleLeftClick();
+        }
+
+        private void HandleLeftClick() {
+            if (camera == null) { return; }
+
+            Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+
+            if (Mouse.current.leftButton.wasReleasedThisFrame) {
+                if (selectedUnit != null) {
+                    selectedUnit.Deselect();
+                    selectedUnit = null;
+                }
+
+                if (Physics.Raycast(cameraRay, out RaycastHit hitInfo, float.MaxValue, LayerMask.GetMask("Default"))
+                    && hitInfo.collider.TryGetComponent(out ISelectable selectable)) {
+                    selectable.Select();
+                    selectedUnit = selectable;
+                }
+            }
+
         }
 
         private void HandleRotation() {
