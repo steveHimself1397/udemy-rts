@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using SFIT.RTS.EventBus;
+using SFIT.RTS.Events;
 using SFIT.RTS.Units;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -13,6 +16,10 @@ namespace SFIT.RTS.Player {
         [SerializeField] private CameraConfig cameraConfig;
         [SerializeField] private LayerMask selectableLayers;
         [SerializeField] private LayerMask floorLayers;
+        [SerializeField] private RectTransform selectionBox;
+
+        private Vector2 startingMousePosition;
+
         private CinemachineFollow cinemachineFollow;
         private float zoomStartTime;
         private float rotationStartTime;
@@ -20,7 +27,8 @@ namespace SFIT.RTS.Player {
 
         private float maxRotationAmount;
 
-        private ISelectable selectedUnit;
+        private List<ISelectable> selectedUnits = new(12);
+        private HashSet<AbstractUnit> aliveUnits = new(100);
 
 
         private void Awake() {
@@ -30,7 +38,21 @@ namespace SFIT.RTS.Player {
 
             startingFollowOffset = cinemachineFollow.FollowOffset;
             maxRotationAmount = Mathf.Abs(cinemachineFollow.FollowOffset.z);
+
+            Bus<UnitSelectedEvent>.OnEvent += HandleUnitSelected;
+            Bus<UnitDeselectedEvent>.OnEvent += HandleUnitDeselected;
+            Bus<UnitSpawnedEvent>.OnEvent += HandleUnitSpawned;
         }
+
+        private void OnDestroy() {
+            Bus<UnitSelectedEvent>.OnEvent -= HandleUnitSelected;
+            Bus<UnitDeselectedEvent>.OnEvent -= HandleUnitDeselected;
+            Bus<UnitSpawnedEvent>.OnEvent -= HandleUnitSpawned;
+
+        }
+        private void HandleUnitSelected(UnitSelectedEvent evt) => selectedUnits.Add(evt.Unit);
+        private void HandleUnitDeselected(UnitDeselectedEvent evt) => selectedUnits.Remove(evt.Unit);
+        private void HandleUnitSpawned(UnitSpawnedEvent args) => aliveUnits.Add(args.Unit);
 
         private void Update() {
             HandlePanning();
@@ -38,15 +60,31 @@ namespace SFIT.RTS.Player {
             HandleRotation();
             HandleLeftClick();
             HandleRightClick();
+            HandleDragSelect();
+        }
+
+
+        private void ResizeSelectionBox() {
+            Vector2 mousePosition = Mouse.current.position.ReadValue();
+
+            float width = mousePosition.x - startingMousePosition.x;
+            float height = mousePosition.y - startingMousePosition.y;
+
+            selectionBox.anchoredPosition = startingMousePosition + new Vector2(width / 2f, height / 2f);
+            selectionBox.sizeDelta = new Vector2(Mathf.Abs(width), Mathf.Abs(height));
+        }
+
+        private void ResetSelectionBox() {
+            selectionBox.sizeDelta = new Vector2(Mathf.Abs(0), Mathf.Abs(0));
         }
 
         private void HandleRightClick() {
-            if (camera == null || selectedUnit == null || selectedUnit is not IMoveable) { return; }
+            if (camera == null || selectedUnits == null || selectedUnits is not IMoveable) { return; }
 
             Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
             if (Mouse.current.rightButton.wasReleasedThisFrame
                 && Physics.Raycast(cameraRay, out RaycastHit hitInfo, float.MaxValue, floorLayers)) {
-                if (selectedUnit is IMoveable worker) {
+                if (selectedUnits is IMoveable worker) {
                     worker.MoveTo(hitInfo.point);
                 }
             }
@@ -58,18 +96,29 @@ namespace SFIT.RTS.Player {
             Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
 
             if (Mouse.current.leftButton.wasReleasedThisFrame) {
-                if (selectedUnit != null) {
-                    selectedUnit.Deselect();
-                    selectedUnit = null;
+                if (selectedUnits != null) {
+                    selectedUnits[0].Deselect();
                 }
 
                 if (Physics.Raycast(cameraRay, out RaycastHit hitInfo, float.MaxValue, selectableLayers)
                     && hitInfo.collider.TryGetComponent(out ISelectable selectable)) {
                     selectable.Select();
-                    selectedUnit = selectable;
                 }
             }
 
+        }
+        private void HandleDragSelect() {
+            if (selectionBox == null) { return; }
+            if (Mouse.current.leftButton.wasPressedThisFrame) {
+                selectionBox.gameObject.SetActive(true);
+
+                startingMousePosition = Mouse.current.position.ReadValue();
+            } else if (Mouse.current.leftButton.isPressed && !Mouse.current.leftButton.wasPressedThisFrame) {
+                ResizeSelectionBox();
+            } else if (Mouse.current.leftButton.wasReleasedThisFrame) {
+                selectionBox.gameObject.SetActive(false);
+                ResetSelectionBox();
+            }
         }
 
         private void HandleRotation() {
